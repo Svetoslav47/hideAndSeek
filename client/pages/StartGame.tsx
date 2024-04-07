@@ -3,23 +3,35 @@ import Checkbox from 'expo-checkbox';
 
 import { StackNavigationProp } from "@react-navigation/stack";
 import { NavStackParamList } from "../components/Navigation";
-import { useState } from "react";
+import { RouteProp } from '@react-navigation/native';
+
+import { useEffect, useState } from "react";
+import { useIsFocused } from '@react-navigation/native';
 
 import Button from "../components/Button";
 
 
 type StartGameProps = {
     navigation: StackNavigationProp<NavStackParamList, "StartGame">
+    route: RouteProp<NavStackParamList, 'StartGame'>;
 }
 
-export default function StartGame({ navigation }: StartGameProps) {
+export default function StartGame({ navigation, route }: StartGameProps) {
     const [gameName, setGameName] = useState("");
     const [isGamePrivate, setIsGamePrivate] = useState(false);
     const [password, setPassword] = useState("");
     const [playerName, setPlayerName] = useState("");
-    const [longitude, setLongitude] = useState("");
-    const [latitude, setLatidude] = useState("");
-    const [circleRadius, setCircleRadius] = useState("");
+    const [longitude, setLongitude] = useState(route.params?.longitude || "");
+    const [latitude, setLatidude] = useState(route.params?.latitude || "");
+    const [circleRadius, setCircleRadius] = useState(route.params?.circleRadius || "");
+
+    const isFocused = useIsFocused();
+
+    useEffect(() => {
+        setLongitude(route.params?.longitude || "");
+        setLatidude(route.params?.latitude || "");
+        setCircleRadius(route.params?.circleRadius || "");
+    }, [isFocused]);
 
     function submitForm() {
         if (gameName === "") return;
@@ -70,7 +82,7 @@ export default function StartGame({ navigation }: StartGameProps) {
                 </TouchableOpacity>
             </View>
             <View style={styles.footer}>
-                <TouchableOpacity style={styles.button} onPress={() => { navigation.goBack }}>
+                <TouchableOpacity style={styles.button} onPress={() => { navigation.goBack() }}>
                     <Text>Back</Text>
                 </TouchableOpacity >
             </View>

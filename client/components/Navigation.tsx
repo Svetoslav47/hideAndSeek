@@ -8,7 +8,11 @@ import PickFromMap from "../pages/PickFromMap";
 
 export type NavStackParamList = {
     StartScreen: undefined;
-	StartGame: undefined;
+	StartGame: {
+		longitude?: string | null;
+		latitude?: string | null;
+		circleRadius?: string | null;
+	} | undefined;
 	PickFromMap: undefined;
 };
 

@@ -1,30 +1,42 @@
+import React, { useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 
 import { StackNavigationProp } from "@react-navigation/stack";
 import { NavStackParamList } from "../components/Navigation";
+import * as Location from 'expo-location';
 
 type StartScreenProps = {
     navigation: StackNavigationProp<NavStackParamList, "StartScreen">
 }
 
-export default function StartScreen({ navigation } : StartScreenProps) {
-  return (
-    <View style={styles.container}>
-        <Text style={styles.header}>Hide and seek</Text>
-        <View style={styles.buttonContainer}> 
-            <TouchableOpacity style={styles.button} onPress={() => { navigation.navigate("StartGame")}}>
-                <Text>Start Game</Text>
-            </TouchableOpacity >
-            <TouchableOpacity style={styles.button}>
-                <Text>Join Game</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.button}>
-                <Text>How to play</Text>
-            </TouchableOpacity>
+export default function StartScreen({ navigation }: StartScreenProps) {
+    useEffect(() => {
+        (async () => {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                alert('Permission to access location was denied');
+                return;
+            }
+        })();
+    }, []);
+
+    return (
+        <View style={styles.container}>
+            <Text style={styles.header}>Hide and seek</Text>
+            <View style={styles.buttonContainer}>
+                <TouchableOpacity style={styles.button} onPress={() => { navigation.navigate("StartGame")}}>
+                    <Text>Start Game</Text>
+                </TouchableOpacity >
+                <TouchableOpacity style={styles.button}>
+                    <Text>Join Game</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.button}>
+                    <Text>How to play</Text>
+                </TouchableOpacity>
+            </View>
+
         </View>
-        
-    </View>
-  );
+    );
 }
 
 const styles = StyleSheet.create({
