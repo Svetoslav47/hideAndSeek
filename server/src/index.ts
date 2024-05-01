@@ -1,13 +1,23 @@
 import express, { Express, Request, Response } from "express";
+import cors from "cors";
 import dotenv from "dotenv";
-import * as socketio from "socket.io";
-import { join } from "path";
+import { createServer } from "http";
+import { Server, Socket } from "socket.io";
+
 dotenv.config();
 
 const app: Express = express();
-app.use(express.json())
 
-const io = new socketio.Server();
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    credentials: false
+  },
+  transports: ['polling', 'websocket']
+});
+
+app.use(express.json())
 
 const port = process.env.PORT || 3001;
 
@@ -24,85 +34,124 @@ type Game = {
   gameName: string;
   isGamePrivate: boolean;
   password: string;
-  gameAdmin: string;
+  gameAdmin: string; // playerID
   longitude: number;
   latitude: number;
   circleRadius: number;
-  gameTime: number;
+  initialTime: number; // seconds 
+  timePassed: number; // seconds passed
   players: Player[];
-  numberOfPlayers: number;
-  numberOfSeekers: number;
   seekers: string[];
-  
-  gameStarted?: boolean;
+
+  hasGameStarted: boolean;
 };
 
-const activeGames: Game[] = [];
+const pendingGames: Game[] = [];
+const startedGames: Game[] = [];
 
 
 function hash(s: string): string {
-  return s.split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a},0).toString(16);
+  return s.split("").reduce(function (a, b) { a = ((a << 5) - a) + b.charCodeAt(0); return a & a }, 0).toString(16);
 }
 
+function joinGame(socket: Socket, gameID: string, playerName: string, longitude: number, latitude: number, password: string) {
+  let player = null;
+  let joinedGame = null as Game | null;
+
+  let game = pendingGames.find((game) => game.gameID === gameID);
+  if (!game) {
+    game = startedGames.find((game) => game.gameID === gameID);
+  }
+  if (!game) {
+    socket.emit("joinGameError", { error: "Game not found" });
+    return {
+      success: false
+    };
+  }
+
+  if (game.isGamePrivate && game.password !== password) {
+    socket.emit("joinGameError", { error: "Incorrect password" });
+    return {
+      success: false
+    };
+  }
+
+  const playerID = hash(playerName + gameID);
+  player = {
+    playerID,
+    playerName,
+    longitude,
+    latitude,
+    isSeeker: false
+  };
+
+  if (!(game.players.find((p) => p.playerID === playerID))) {
+    game.players.push(player);
+  }
+
+  if(game.hasGameStarted) {
+    socket.emit("joinGameError", { error: "Game has already started" });
+    return {
+      success: false
+    };
+  }
+
+  joinedGame = game;
+  socket.join(joinedGame.gameID);
+  io.to(joinedGame.gameID).emit("playerJoined", { playerName, longitude, latitude });
+  
+  return {
+    game: joinedGame,
+    player,
+    success: true
+  }
+}
 
 io.on("connection", (socket) => {
-  let player: Player | null = null;
-  let joinedGameID: string | null = null;
+  const gameID = Array.isArray(socket.handshake.query.gameID) ? socket.handshake.query.gameID[0] : socket.handshake.query.gameID;
+  const playerName = Array.isArray(socket.handshake.query.playerName) ? socket.handshake.query.playerName[0] : socket.handshake.query.playerName;
+  const longitude = Array.isArray(socket.handshake.query.longitude) ? socket.handshake.query.longitude[0] : socket.handshake.query.longitude;
+  const latitude = Array.isArray(socket.handshake.query.latitude) ? socket.handshake.query.latitude[0] : socket.handshake.query.latitude;
+  const password = Array.isArray(socket.handshake.query.password) ? socket.handshake.query.password[0] : socket.handshake.query.password || "";
 
-  socket.on("joinGame", (data) => {
-    const { gameID, playerName, longitude, latitude, password } : {
-      gameID:string,
-      playerName:string,
-      longitude:string,
-      latitude:string,
-      password:string
-    } = data;
+  if (!gameID || !playerName || !longitude || !latitude) {
+    socket.emit("joinGameError", { error: "Missing required fields" });
+    return;
+  }
 
-    const game = activeGames.find((game) => game.gameID === gameID);
-    if (!game) {
-      socket.emit("joinGameError", { error: "Game not found" });
+  const { game : joinedGame, player, success:joinGameSuccess } = joinGame(socket, gameID, playerName, parseFloat(longitude), parseFloat(latitude), password);
+  if (!joinGameSuccess || !joinedGame || !player) {
+    return;
+  }
+
+  console.log(`[server]: Player ${playerName} joined game ${gameID}`);
+
+  socket.on("startGame", () => {
+    const game = pendingGames.find((game) => game.gameID === joinedGame.gameID);
+    if (game?.gameAdmin !== player?.playerID) {
+      socket.emit("startGameError", { error: "Only the game admin can start the game" });
       return;
     }
 
-    if (game.gameStarted) {
-      socket.emit("joinGameError", { error: "Game already started" });
-      return;
+    if (game) {
+      startedGames.push(game);
+      pendingGames.splice(pendingGames.indexOf(game), 1);
+      io.to(joinedGame.gameID).emit("gameStarted");
     }
-
-    if (game.isGamePrivate) {
-      if (game.password !== password) {
-        socket.emit("joinGameError", { error: "Incorrect password" });
-        return;
-      }
-    }
-
-    const playerID = hash(playerName + gameID);
-    player = {
-      playerID,
-      playerName,
-      longitude: parseFloat(longitude),
-      latitude: parseFloat(latitude),
-      isSeeker: false
-    };
-
-    if (!(game.players.find((p) => p.playerID === playerID))) {
-      game.players.push(player);
-      game.numberOfPlayers++;
-    }
-
-    joinedGameID = gameID;
-
-    socket.join(joinedGameID);
-    io.to(joinedGameID).emit("playerJoined", { playerName, longitude, latitude });  
   });
 
   socket.on("disconnect", () => {
-    if (player?.playerID && joinedGameID) {
-      const game = activeGames.find((game) => game.gameID === joinedGameID);
+    if (player?.playerID && joinedGame.gameID) {
+      let game = pendingGames.find((game) => game.gameID === joinedGame.gameID);
       if (game) {
         game.players = game.players.filter((gamePlayer) => gamePlayer.playerID !== player?.playerID);
-        game.numberOfPlayers--;
-        io.to(joinedGameID).emit("playerLeft", { playerName: player.playerName });
+        io.to(joinedGame.gameID).emit("playerLeft", { playerName: player.playerName });
+      }
+
+      game = startedGames.find((game) => game.gameID === joinedGame.gameID);
+      if (game) {
+        game.players = game.players.filter((gamePlayer) => gamePlayer.playerID !== player?.playerID);
+        io.to(joinedGame.gameID).emit("playerLeft", { playerName: player.playerName });
       }
     }
   });
@@ -110,25 +159,30 @@ io.on("connection", (socket) => {
 
 app.post("/createGame", (req: Request, res: Response) => {
   console.log("[server]: Create Game");
-  const { 
-    gameName, 
-    isGamePrivate:isGamePrivateRaw, 
-    isGamePrivate:passwordRaw, 
-    playerName, 
-    longitude:longitudeRaw, 
-    latitude:latitudeRaw, 
-    circleRadius:circleRadiusRaw 
+  const {
+    gameName,
+    isGamePrivate,
+    password,
+    playerName,
+    longitude: longitudeRaw,
+    latitude: latitudeRaw,
+    circleRadius: circleRadiusRaw,
+    gameTime,
   } = req.body;
 
-  const isGamePrivate = isGamePrivateRaw as boolean;
-  const password = passwordRaw ? passwordRaw : "";
   const longitude = parseFloat(longitudeRaw);
   const latitude = parseFloat(latitudeRaw);
   const circleRadius = parseFloat(circleRadiusRaw);
-  const gameTime = 0;
   const gameID = hash(gameName + longitude + latitude + circleRadius);
-  
-  for (const game of activeGames) {
+
+  for (const game of pendingGames) {
+    if (game.gameID === gameID) {
+      res.status(400).json({ error: "Game already exists" });
+      return;
+    }
+  }
+
+  for (const game of startedGames) {
     if (game.gameID === gameID) {
       res.status(400).json({ error: "Game already exists" });
       return;
@@ -137,7 +191,7 @@ app.post("/createGame", (req: Request, res: Response) => {
 
   const playerId = hash(playerName + gameID);
 
-  const game: Game = { 
+  const game: Game = {
     gameID,
     gameName,
     isGamePrivate,
@@ -146,9 +200,8 @@ app.post("/createGame", (req: Request, res: Response) => {
     longitude,
     latitude,
     circleRadius,
-    gameTime,
-    numberOfPlayers: 1,
-    numberOfSeekers: 0,
+    initialTime: gameTime,
+    timePassed: 0,
     seekers: [],
     players: [
       {
@@ -158,14 +211,23 @@ app.post("/createGame", (req: Request, res: Response) => {
         latitude: latitudeRaw,
         isSeeker: false
       }
-    ]
+    ],
+    hasGameStarted: false
   };
 
-  activeGames.push(game);
+  pendingGames.push(game);
 
   res.json({ gameID });
 });
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`[server]: Server is running at http://localhost:${port}`);
 });
+
+const gameLoop = setInterval(() => {
+  for (const game of startedGames) {
+    game.timePassed += 1;
+    io.to(game.gameID).emit("timeUpdate", { time: game.initialTime - game.timePassed });
+    console.log(game.gameID, game.timePassed);
+  }
+}, 1000);

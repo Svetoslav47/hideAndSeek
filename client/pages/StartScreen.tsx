@@ -27,7 +27,7 @@ export default function StartScreen({ navigation }: StartScreenProps) {
                 <TouchableOpacity style={styles.button} onPress={() => { navigation.navigate("StartGame")}}>
                     <Text>Start Game</Text>
                 </TouchableOpacity >
-                <TouchableOpacity style={styles.button}>
+                <TouchableOpacity style={styles.button} onPress={() => { navigation.navigate("JoinGame")}}>
                     <Text>Join Game</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.button}>

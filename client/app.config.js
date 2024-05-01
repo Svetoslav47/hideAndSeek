@@ -2,8 +2,8 @@ import 'dotenv/config';
 
 export default {
   "expo": {
-    "name": "client",
-    "slug": "client",
+    "name": "Hide and Seek",
+    "slug": "hide-and-seek",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

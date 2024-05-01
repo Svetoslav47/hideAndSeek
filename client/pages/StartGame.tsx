@@ -34,19 +34,6 @@ export default function StartGame({ navigation, route }: StartGameProps) {
     }, [isFocused]);
 
     function submitForm() {
-        console.log("submitting form");
-        if (gameName === "") return;
-        console.log("passed gameName");
-        if (playerName === "") return;
-        console.log("passed playerName");
-        if (isGamePrivate && password === "") return;
-        console.log("passed password");
-        if (longitude === "") return;
-        console.log("passed longitude");
-        if (latitude === "") return;
-        console.log("passed latitude");
-        if (circleRadius === "") return;
-        console.log("passed circleRadius and submitting form");
         fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/createGame`, {
             method: "POST",
             body: JSON.stringify({
@@ -65,6 +52,12 @@ export default function StartGame({ navigation, route }: StartGameProps) {
             .then(res => res.json())
             .then(data => {
                 console.log(data);
+                const { gameID, error } = data;
+                if (error) {
+                    console.error(error);
+                    return;
+                }
+                navigation.navigate("Game", { gameID, playerName, password });
             })
             .catch(err => {
                 console.error(err);
