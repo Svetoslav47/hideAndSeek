@@ -99,6 +99,7 @@ function joinGame(socket: Socket, gameID: string, playerName: string, longitude:
   joinedGame = game;
   socket.join(joinedGame.gameID);
   io.to(joinedGame.gameID).emit("playerJoined", { playerName, longitude, latitude });
+  socket.emit("gameJoined", { game: joinedGame, player });
   
   return {
     game: joinedGame,
@@ -127,15 +128,14 @@ io.on("connection", (socket) => {
   console.log(`[server]: Player ${playerName} joined game ${gameID}`);
 
   socket.on("startGame", () => {
-    const game = pendingGames.find((game) => game.gameID === joinedGame.gameID);
-    if (game?.gameAdmin !== player?.playerID) {
+    if (joinedGame.gameAdmin !== player.playerID) {
       socket.emit("startGameError", { error: "Only the game admin can start the game" });
       return;
     }
 
-    if (game) {
-      startedGames.push(game);
-      pendingGames.splice(pendingGames.indexOf(game), 1);
+    if (joinedGame) {
+      startedGames.push(joinedGame);
+      pendingGames.splice(pendingGames.indexOf(joinedGame), 1);
       io.to(joinedGame.gameID).emit("gameStarted");
     }
   });
@@ -147,6 +147,8 @@ io.on("connection", (socket) => {
         game.players = game.players.filter((gamePlayer) => gamePlayer.playerID !== player?.playerID);
         io.to(joinedGame.gameID).emit("playerLeft", { playerName: player.playerName });
       }
+
+      console.log(`[server]: Player ${player.playerName} left game ${joinedGame.gameID}`);
 
       game = startedGames.find((game) => game.gameID === joinedGame.gameID);
       if (game) {

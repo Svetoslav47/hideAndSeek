@@ -18,9 +18,35 @@ type LocationState = Location.LocationObject | null;
 // const serverURL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://192.168.7.129:3001';
 const serverURL = 'http://192.168.7.129:3001';
 
+type Player = {
+    playerID: string;
+    playerName: string;
+    longitude: number;
+    latitude: number;
+    isSeeker: boolean;
+  };
+
+type Game = {
+    gameID: string;
+    gameName: string;
+    isGamePrivate: boolean;
+    password: string;
+    gameAdmin: string; // playerID
+    longitude: number;
+    latitude: number;
+    circleRadius: number;
+    initialTime: number; // seconds 
+    timePassed: number; // seconds passed
+    players: Player[];
+    seekers: string[];
+  
+    hasGameStarted: boolean;
+  };
+
 export default function Game({ navigation, route }: GameProps) {
     const { gameID, playerName, password } = route.params;
     const [location, setLocation] = useState<LocationState>(null);
+    const [game, setGame] = useState<Game | null>(null);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [socket, setSocket] = useState<Socket | null>(null);
 

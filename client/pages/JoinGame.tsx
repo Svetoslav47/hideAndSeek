@@ -51,7 +51,7 @@ export default function StartScreen({ navigation }: StartScreenProps) {
                     playerName: playerName,
                     password: password
                 }) }}>
-                    <Text>Start Game</Text>
+                    <Text>Join Game</Text>
                 </TouchableOpacity>
             </View>
             <View style={styles.footer}>
