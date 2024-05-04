@@ -35,8 +35,8 @@ type Game = {
   isGamePrivate: boolean;
   password: string;
   gameAdmin: string; // playerID
-  longitude: number;
-  latitude: number;
+  centerLongitude: number;
+  centerLatitude: number;
   circleRadius: number;
   initialTime: number; // seconds 
   timePassed: number; // seconds passed
@@ -126,6 +126,7 @@ io.on("connection", (socket) => {
   }
 
   console.log(`[server]: Player ${playerName} joined game ${gameID}`);
+  
 
   socket.on("startGame", () => {
     if (joinedGame.gameAdmin !== player.playerID) {
@@ -139,6 +140,19 @@ io.on("connection", (socket) => {
       io.to(joinedGame.gameID).emit("gameStarted");
     }
   });
+
+
+  socket.on("updateLocation", (data) => {
+    if (!player) {
+      return;
+    }
+
+    player.longitude = data.longitude;
+    player.latitude = data.latitude;
+    console.log(`[server]: Player ${player.playerName} updated location to ${data.longitude}, ${data.latitude}`);
+
+    io.to(joinedGame.gameID).emit("playerLocationUpdate", { playerID: player.playerID, longitude: player.longitude, latitude: player.latitude });
+  } );
 
   socket.on("disconnect", () => {
     if (player?.playerID && joinedGame.gameID) {
@@ -199,8 +213,8 @@ app.post("/createGame", (req: Request, res: Response) => {
     isGamePrivate,
     password,
     gameAdmin: playerId,
-    longitude,
-    latitude,
+    centerLongitude:longitude,
+    centerLatitude:latitude,
     circleRadius,
     initialTime: gameTime,
     timePassed: 0,
