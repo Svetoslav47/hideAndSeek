@@ -24,8 +24,8 @@ export default function StartScreen({ navigation }: StartScreenProps) {
         <View style={styles.container}>
             <Text style={styles.header}>Hide and seek</Text>
             <View style={styles.buttonContainer}>
-                <TouchableOpacity style={styles.button} onPress={() => { navigation.navigate("StartGame")}}>
-                    <Text>Start Game</Text>
+                <TouchableOpacity style={styles.button} onPress={() => { navigation.navigate("CreateGame")}}>
+                    <Text>Create Game</Text>
                 </TouchableOpacity >
                 <TouchableOpacity style={styles.button} onPress={() => { navigation.navigate("JoinGame")}}>
                     <Text>Join Game</Text>

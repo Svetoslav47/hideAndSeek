@@ -13,7 +13,7 @@
     "@react-navigation/native": "^6.1.17",
     "@react-navigation/stack": "^6.3.29",
     "dotenv": "^16.4.5",
-    "expo": "~50.0.14",
+    "expo": "^51.0.34",
     "expo-checkbox": "~2.7.0",
     "expo-location": "~16.5.5",
     "expo-status-bar": "~1.11.1",
@@ -22,7 +22,8 @@
     "react-native": "0.73.6",
     "react-native-gesture-handler": "^2.16.0",
     "react-native-maps": "1.10.0",
-    "socket.io-client": "^4.7.5"
+    "socket.io-client": "^4.7.5",
+    "tsx": "^4.19.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

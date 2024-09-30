@@ -38,12 +38,11 @@ type Game = {
   centerLongitude: number;
   centerLatitude: number;
   circleRadius: number;
-  initialTime: number; // seconds 
-  timePassed: number; // seconds passed
   players: Player[];
   seekers: string[];
 
-  hasGameStarted: boolean;
+  timeUntilStart: number;
+  timeUntilEnd: number;
 };
 
 const pendingGames: Game[] = [];
@@ -89,7 +88,7 @@ function joinGame(socket: Socket, gameID: string, playerName: string, longitude:
     game.players.push(player);
   }
 
-  if(game.hasGameStarted) {
+  if(game.timeUntilStart === 0) {
     socket.emit("joinGameError", { error: "Game has already started" });
     return {
       success: false
@@ -183,13 +182,30 @@ app.post("/createGame", (req: Request, res: Response) => {
     longitude: longitudeRaw,
     latitude: latitudeRaw,
     circleRadius: circleRadiusRaw,
-    gameTime,
+    gameLength,
+    timeUntilStart
   } = req.body;
+
+  if (!gameName || !playerName || !longitudeRaw || !latitudeRaw || !circleRadiusRaw) {
+    res.status(400).json({ error: "Missing required fields" });
+    return;
+  }
+
+  if (isGamePrivate && !password) {
+    res.status(400).json({ error: "Missing password" });
+    return;
+  }
+
+  if (!gameLength) {
+    res.status(400).json({ error: "Missing game time" });
+    return;
+  }
 
   const longitude = parseFloat(longitudeRaw);
   const latitude = parseFloat(latitudeRaw);
   const circleRadius = parseFloat(circleRadiusRaw);
   const gameID = hash(gameName + longitude + latitude + circleRadius);
+
 
   for (const game of pendingGames) {
     if (game.gameID === gameID) {
@@ -216,8 +232,6 @@ app.post("/createGame", (req: Request, res: Response) => {
     centerLongitude:longitude,
     centerLatitude:latitude,
     circleRadius,
-    initialTime: gameTime,
-    timePassed: 0,
     seekers: [],
     players: [
       {
@@ -228,7 +242,8 @@ app.post("/createGame", (req: Request, res: Response) => {
         isSeeker: false
       }
     ],
-    hasGameStarted: false
+    timeUntilStart,
+    timeUntilEnd: timeUntilStart + gameLength
   };
 
   pendingGames.push(game);
@@ -241,9 +256,9 @@ server.listen(port, () => {
 });
 
 const gameLoop = setInterval(() => {
-  for (const game of startedGames) {
-    game.timePassed += 1;
-    io.to(game.gameID).emit("timeUpdate", { time: game.initialTime - game.timePassed });
-    console.log(game.gameID, game.timePassed);
+  for (const game of pendingGames) {
+    game.timeUntilStart -= 1;
+    console.log(`[server]: Game ${game.gameID} starts in ${game.timeUntilStart} seconds`);
+    io.to(game.gameID).emit("timeUpdate", {game: game});
   }
 }, 1000);

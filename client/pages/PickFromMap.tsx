@@ -52,7 +52,7 @@ export default function PickFromMap({navigation} : PickFromMapProps) {
       <View style={styles.header}>
         <Button onPress={() => {}} icon="ab-testing" color='transparent' stylesProp={{backgroundColor:"#DDDDDD00"}}/>
         <Text style={styles.headerText}>Pick a location</Text>
-        <Button onPress={() => navigation.navigate("StartGame", {
+        <Button onPress={() => navigation.navigate("CreateGame", {
           longitude: selectedLocation?.longitude.toString(),
           latitude: selectedLocation?.latitude.toString(),
           circleRadius: circleRadius.toString()

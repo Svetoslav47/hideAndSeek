@@ -11,12 +11,12 @@ import { useIsFocused } from '@react-navigation/native';
 import Button from "../components/Button";
 
 
-type StartGameProps = {
-    navigation: StackNavigationProp<NavStackParamList, "StartGame">
-    route: RouteProp<NavStackParamList, 'StartGame'>;
+type CreateGameProps = {
+    navigation: StackNavigationProp<NavStackParamList, "CreateGame">
+    route: RouteProp<NavStackParamList, 'CreateGame'>;
 }
 
-export default function StartGame({ navigation, route }: StartGameProps) {
+export default function CreateGame({ navigation, route }: CreateGameProps) {
     const [gameName, setGameName] = useState("");
     const [isGamePrivate, setIsGamePrivate] = useState(false);
     const [password, setPassword] = useState("");
@@ -24,6 +24,14 @@ export default function StartGame({ navigation, route }: StartGameProps) {
     const [longitude, setLongitude] = useState(route.params?.longitude || "");
     const [latitude, setLatidude] = useState(route.params?.latitude || "");
     const [circleRadius, setCircleRadius] = useState(route.params?.circleRadius || "");
+
+    const [gameLengthHours, setGameLengthHours] = useState("");
+    const [gameLengthMinutes, setGameLengthMinutes] = useState("");
+    const [gameLengthSeconds, setGameLengthSeconds] = useState("");
+
+    const [timeUntilStartHours, setTimeUntilStartHours] = useState("");
+    const [timeUntilStartMinutes, setTimeUntilStartMinutes] = useState("");
+    const [timeUntilStartSeconds, setTimeUntilStartSeconds] = useState("");
 
     const isFocused = useIsFocused();
 
@@ -34,6 +42,38 @@ export default function StartGame({ navigation, route }: StartGameProps) {
     }, [isFocused]);
 
     function submitForm() {
+        if (!gameName ||
+            !playerName || 
+            !longitude || 
+            !latitude || 
+            !circleRadius || 
+            !gameLengthHours || 
+            !gameLengthMinutes || 
+            !gameLengthSeconds || 
+            !timeUntilStartHours || 
+            !timeUntilStartMinutes || 
+            !timeUntilStartSeconds
+        ) {
+            console.error("Missing fields");
+            return;
+        }
+
+        if (isGamePrivate && !password) {
+            console.error("Missing password");
+            return;
+        }
+        const gameLengthHoursInt = parseInt(gameLengthHours);
+        const gameLengthMinutesInt = parseInt(gameLengthMinutes);
+        const gameLengthSecondsInt = parseInt(gameLengthSeconds);
+
+        const timeUntilStartHoursInt = parseInt(timeUntilStartHours);
+        const timeUntilStartMinutesInt = parseInt(timeUntilStartMinutes);
+        const timeUntilStartSecondsInt = parseInt(timeUntilStartSeconds);
+
+        const timeUntilStartTotalSeconds = timeUntilStartHoursInt * 3600 + timeUntilStartMinutesInt * 60 + timeUntilStartSecondsInt;
+
+        const gameLengthTotalSeconds = gameLengthHoursInt * 3600 + gameLengthMinutesInt * 60 + gameLengthSecondsInt;
+
         fetch(`${process.env.EXPO_PUBLIC_BACKEND_URL}/createGame`, {
             method: "POST",
             body: JSON.stringify({
@@ -43,7 +83,9 @@ export default function StartGame({ navigation, route }: StartGameProps) {
                 playerName,
                 longitude,
                 latitude,
-                circleRadius
+                circleRadius,
+                gameLength: gameLengthTotalSeconds,
+                timeUntilStart: timeUntilStartTotalSeconds
             }),
             headers: {
                 "Content-Type": "application/json"
@@ -66,7 +108,7 @@ export default function StartGame({ navigation, route }: StartGameProps) {
     }
     return (
         <View style={styles.container}>
-            <Text style={styles.header}>StartGame</Text>
+            <Text style={styles.header}>Create Game</Text>
             <View style={styles.inputsContainer}>
                 <View style={styles.inputField}>
                     <Text style={styles.inputText}>Game Name</Text>
@@ -100,8 +142,31 @@ export default function StartGame({ navigation, route }: StartGameProps) {
 
                     <Button icon="crosshairs-gps" onPress={() => { navigation.navigate("PickFromMap") }} size={20} color="black" />
                 </View>
+                
+                {/* game length in hours min and sec */}
+                <View style={styles.inputField}>
+                    <Text style={styles.inputText}>Game Length</Text>
+                    <TextInput keyboardType="number-pad" style={styles.inputTextInput} value={gameLengthHours} placeholder="Hours" onChange={(e) => setGameLengthHours(e.nativeEvent.text)} />
+                    <Text style={styles.inputText}>h:</Text>
+                    <TextInput keyboardType="number-pad" style={styles.inputTextInput} value={gameLengthMinutes} placeholder="Minutes" onChange={(e) => {if (parseInt(e.nativeEvent.text) > 59) setGameLengthMinutes("59"); else setGameLengthMinutes(e.nativeEvent.text)} } />
+                    <Text style={styles.inputText}>m:</Text>
+                    <TextInput keyboardType="number-pad" style={styles.inputTextInput} value={gameLengthSeconds} placeholder="Seconds" onChange={(e) => {if (parseInt(e.nativeEvent.text) > 59) setGameLengthSeconds("59"); else setGameLengthSeconds(e.nativeEvent.text)} } />
+                    <Text style={styles.inputText}>s</Text>
+                </View>
+
+                {/* time until start in hours min and sec */}
+                <View style={styles.inputField}>
+                    <Text style={styles.inputText}>Time Until Start</Text>
+                    <TextInput keyboardType="number-pad" style={styles.inputTextInput} value={timeUntilStartHours} placeholder="Hours" onChange={(e) => setTimeUntilStartHours(e.nativeEvent.text)} />
+                    <Text style={styles.inputText}>h:</Text>
+                    <TextInput keyboardType="number-pad" style={styles.inputTextInput} value={timeUntilStartMinutes} placeholder="Minutes" onChange={(e) => {if (parseInt(e.nativeEvent.text) > 59) setTimeUntilStartMinutes("59"); else setTimeUntilStartMinutes(e.nativeEvent.text)} } />
+                    <Text style={styles.inputText}>m:</Text>
+                    <TextInput keyboardType="number-pad" style={styles.inputTextInput} value={timeUntilStartSeconds} placeholder="Seconds" onChange={(e) => {if (parseInt(e.nativeEvent.text) > 59) setTimeUntilStartSeconds("59"); else setTimeUntilStartSeconds(e.nativeEvent.text)} } />
+                    <Text style={styles.inputText}>s</Text>
+                </View>
+
                 <TouchableOpacity style={StyleSheet.compose(styles.button, { margin: 0 })} onPress={() => { submitForm() }}>
-                    <Text>Start Game</Text>
+                    <Text>Create Game</Text>
                 </TouchableOpacity>
             </View>
             <View style={styles.footer}>

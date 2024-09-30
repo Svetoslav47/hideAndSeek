@@ -28,14 +28,12 @@ type Game = {
     centerLongitude: number;
     centerLatitude: number;
     circleRadius: number;
-    initialTime: number; // seconds 
-    timePassed: number; // seconds passed
     players: Player[];
     seekers: string[];
-
-    hasGameStarted: boolean;
-};
-
+  
+    timeUntilStart: number;
+    timeUntilEnd: number;
+  };
 type LocationState = Location.LocationObject | null;
 
 
@@ -163,6 +161,10 @@ export default function Game({ navigation, route }: GameProps) {
                 }) => {
                     setGame(data.game);
                     currentPlayer.current = data.player;
+                });
+
+                socket.on("timeUpdate", (data: { game : Game }) => {
+                    setGame(data.game);
                 });
             }
         }
@@ -302,18 +304,26 @@ export default function Game({ navigation, route }: GameProps) {
                 left: 10,
 
             }}>Game ID: {gameID}</Text>
+
             <Text style={{
                 position: 'absolute',
                 top: 60,
                 left: 10,
 
             }}>Player Name: {playerName}</Text>
+
             <Text style={{
                 position: 'absolute',
                 top: 80,
                 left: 10,
-            }}
-            >Location: {currentLocation.coords.latitude}, {currentLocation.coords.longitude}</Text>
+            }}>
+            Location: {currentLocation.coords.latitude}, {currentLocation.coords.longitude}</Text>
+
+            {game && <Text style={{
+                position: 'absolute',
+                top: 100,
+                left: 10,
+            }}>Time until start: {game.timeUntilStart}</Text>}
         </>
     );
 }
